@@ -1,0 +1,1890 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html><head></head><body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    
+    
+
+  <div class="border-box-sizing">
+    <div class="container">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="n">nv</span><span class="o">/</span><span class="n">Downloads</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>/home/nv/Downloads
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1337</span><span class="p">)</span>  <span class="c1"># for reproducibility</span>
+
+<span class="kn">from</span> <span class="nn">keras.preprocessing</span> <span class="kn">import</span> <span class="n">sequence</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">Dropout</span><span class="p">,</span> <span class="n">Embedding</span><span class="p">,</span> <span class="n">LSTM</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span> <span class="n">merge</span><span class="p">,</span> <span class="n">BatchNormalization</span>
+<span class="kn">from</span> <span class="nn">keras.datasets</span> <span class="kn">import</span> <span class="n">imdb</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">keras.preprocessing.text</span> <span class="kn">import</span> <span class="n">Tokenizer</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[5]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="n">max_features</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="n">max_len</span> <span class="o">=</span> <span class="mi">200</span>  <span class="c1"># cut texts after this number of words (among top max_features most common words)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># read in the train data</span>
+<span class="n">X_train</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">y_train</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;./aclImdb/train/pos/&#39;</span>
+<span class="n">X_train</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">+</span> <span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.txt&#39;</span><span class="p">)])</span>
+<span class="n">y_train</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12500</span><span class="p">)])</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;./aclImdb/train/neg/&#39;</span>
+<span class="n">X_train</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">+</span> <span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.txt&#39;</span><span class="p">)])</span>
+<span class="n">y_train</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12500</span><span class="p">)])</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;x:&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">X_train</span><span class="p">[:</span><span class="mi">1</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">X_train</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:])</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">X_train</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;y:&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">y_train</span><span class="p">[:</span><span class="mi">1</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">y_train</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:])</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y_train</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>x:
+[&quot;Here&#39;s a gritty, get-the-bad guys revenge story starring a relentless and rough Denzel Washington. He&#39;s three personalities here: a down-and-out-low-key-now drunk- former mercenary, then a loving father-type person to a little girl and then a brutal maniac on the loose seeking answers and revenge.&lt;br /&gt;&lt;br /&gt;The story is about Washington hired to be a bodyguard for a little American girl living in Mexico, where kidnappings of children occur regularly (at least according to the movie.) He becomes attached to the kid, played winningly by THE child actress of our day, Dakota Fanning. When Fanning is kidnapped in front of him, Washington goes after the men responsible and spares no one. Beware: this film is not for the squeamish.&lt;br /&gt;&lt;br /&gt;This is stylish film-making, which is good and bad. I liked it, but a number of people found it too frenetic for their tastes as the camera-work is one that could give you a headache. I thought it fit the tense storyline and was fascinating to view, but it&#39;s (the shaky camera) not for all tastes.&lt;br /&gt;&lt;br /&gt;Besides the two stars, there is the always-interesting Christopher Walken, in an uncharacteristically low-key role, and a number of other fine actors.&lt;br /&gt;&lt;br /&gt;The film panders to the base emotions in all of us, but it works.&quot;]
+[&#39;Colleges, High Schools, Fraternities and Sororities have been the most popular stalking grounds for maniacal madmen since the slasher cycle first became a popular cinema culture throughout the late seventies. Even backwoods cabins and campsites have rode shotgun to the amount of massacres that have taken place on campuses since Halloween categorised the genre as a cult horror category. From early entries like To all a Good Night right up until the big budgeted schlock of titles like Urban Legend or Schools Out, there\&#39;s usually always been a campus slasher lurking somewhere in the pipeline. Despite being picked up by Troma - the titans of B movie badness \xc2\x96 Splatter University was heavily panned upon release and never really found an audience. Even notorious hack and slash websites like HYSTERIA-LIVES have written off Richard Haines\&#39; splatter yarn as one of the worst of the early eighties boom. I always approach criticised movies optimistically because there\&#39;s often the chance than a few bad reviews can be unfairly contagious like a dose of the flu, which crowds the judgement of certain authors.&lt;br /&gt;&lt;br /&gt;It begins in traditional fashion at the place where any maniac worth his salts emerges. Yep you guessed it \xc2\x96 an insane asylum! It seems that one of the inmates has decided that he\&#39;s unhappy with the level of service at the institution and therefore he\&#39;s looking to take his business elsewhere. The unseen nut-job makes his break after stabbing an unfortunate orderly where the sun certainly doesn\&#39;t shine. He obviously favours the dress sense of the murdered worker, so he takes the liberty of borrowing his uniform, blood stained trousers and all!&lt;br /&gt;&lt;br /&gt;Three years later, we transfer to St Trinians College, an educational establishment that is controlled by catholic priests. A teacher is busy after hours marking her students work when all of a sudden there\&#39;s a knock at the door. Before she has a chance to find out what the unseen visitor wants, he stabs her in the chest with a kitchen knife and she falls to the floor in a bloody heap. This of course means that there\&#39;s a vacancy at the university and so we\&#39;re introduced to Julie Parker (Francine Forbes), the lovable replacement for the recently departed lecturer. It seems that her arrival has inadvertently given the resident maniac all the motivation that he needs to go on a no holds barred slaughter-thon. Before long students and teachers alike are dropping like flies to the camera shy menace as he stalks the corridors and local areas armed with an exceptionally large blade. Suspicious suspects abound, but can professor Parker solve the mystery of the campus murderer before she becomes just another statistic? &lt;br /&gt;&lt;br /&gt;I\&#39;m not precisely sure how many versions of this movie are available. The UK altered video was released under the alias of Campus Killings, but the US copy that I own states that it\&#39;s the complete unedited edition, which could mean that there is a censored print floating about somewhere? I\&#39;d be fairly surprised if that was the case as Splatter University certainly isn\&#39;t as gore-delicious as the hyperbole packaging would lead you to believe. One or two litres of corn syrup certainly don\&#39;t stand up to gore hound\&#39;s scrutiny when compared to the likes of Blood Rage or Pieces, so in this instance the movie is somewhat over hyped. One thing that many critics have failed to mention is the charming lead performance from Francine Forbes, who ends up carrying the entire picture on her shoulders throughout the 79-minute running time. Despite amateurish direction from Richard Haines she still unveils some magnificent potential that should have lead to the chance of another stab at serious acting under a more accomplished helmer. Unfortunately that possibility never came, and bottom of the barrel bombs like Death Ring and Splitz certainly didn\&#39;t help to nurture a talent that could have improved dramatically under the right scholarship.&lt;br /&gt;&lt;br /&gt;The rest of the cast members were par for the course of movie obscurity, especially the wooden plank teenagers who for some strange reason acted like they were auditioning for a remake of Grease or The Wanderers. The bog standard point and shoot direction couldn\&#39;t have helped to build much confidence in the project and the fact that the few signs of potential were undermined by the clumsy handling of the script writer left the feature effectively unredeemable. Perhaps the only claim of originality to be found in Haines\&#39; slasher is the brave attempt for the contrasting conclusion. Let\&#39;s just say that it\&#39;s not a final that I was expecting to witness in a movie that was so typical of the cycle.&lt;br /&gt;&lt;br /&gt;At one point in the runtime, one of the teens says, &quot;Man that Parker bores me to tears\xc2\x85&quot; Well the same can be said for Splatter University, which never lifts the pace above slow motion. With that said though, Francine Forbes made for a delectable scream queen and undoubtedly one that I would have paid to watch again in a similar role. So that pretty much sums up this un-troma-tising ride. Slow paced, shoddy but still strangely alluring; you\&#39;d have to be especially forgiving to give it a chance\xc2\x85&#39;]
+25000
+y:
+[1]
+[0]
+25000
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># read in the test data</span>
+
+<span class="n">X_test</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">y_test</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;./aclImdb/test/pos/&#39;</span>
+<span class="n">X_test</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">+</span> <span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.txt&#39;</span><span class="p">)])</span>
+<span class="n">y_test</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12500</span><span class="p">)])</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;./aclImdb/test/neg/&#39;</span>
+<span class="n">X_test</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">+</span> <span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.txt&#39;</span><span class="p">)])</span>
+<span class="n">y_test</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12500</span><span class="p">)])</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;x:&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">X_test</span><span class="p">[:</span><span class="mi">1</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">X_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:])</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">X_test</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;y:&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">y_test</span><span class="p">[:</span><span class="mi">1</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">y_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:])</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y_test</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>x:
+[&#39;A light, uplifting and engaging movie. Watching Irene Dunne is a delight! As you watch her, she ceases to be Irene Dunne and becomes in every way Paula Wharton.&lt;br /&gt;&lt;br /&gt;I have enjoyed Irene Dunne in every movie that I have seen and that would be nearly all of them. What a shame that most of her movies need restoration so badly. I do hope Irene Dunne movie are restored before it is too late they are such treasures Thank goodness this is not the case with Over 21.&lt;br /&gt;&lt;br /&gt;It is a must see if you like superb acting and witty comedy with serious overtones. I agree with a previous comment on the speech &quot;The World and Apple Pie&quot; it was one of the many highlights of the movie. I read somewhere that Irene Dunne helped in writing that speech along with Director Vidor (Irene Dunne was a very good and charitable person in private life) and it certainly seems to show through in her movies!&#39;]
+[&quot;I have not figured out what the chosen title has to do with the movie. This is another gathering of monsters just like the HOUSE OF FRANKENSTEIN. Not exactly a masterful plot, but Universal needed to capitalize again.&lt;br /&gt;&lt;br /&gt;Dr. Edelman (Onslow Stevens) is either very ambitious or over the top in the ego department. He is working on the cure to keep Larry Talbot from turning into the Wolf Man. Somehow Count Dracula happens to drop by to get a fix on his vampirism. And rounding out the good doctor&#39;s experiments is the restoring of the Frankenstein monster&#39;s energy. Along the way, the kind hearted doctor&#39;s blood is tainted with that of Dracula.&lt;br /&gt;&lt;br /&gt;John Carradine plays Dracula again. This time he is more convincing. Lon Chaney Jr. as usual is the soulful Wolf Man. Glenn Strange is the Frankenstein monster, who has very little to do this outing. Also with mentionable roles are Lionel Atwill and Martha O&#39;Driscoll.&quot;]
+25000
+y:
+[1]
+[0]
+25000
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#tokenize works to list of integers where each integer is a key to a word</span>
+<span class="n">reviewTokenizer</span> <span class="o">=</span> <span class="n">Tokenizer</span><span class="p">(</span><span class="n">nb_words</span><span class="o">=</span><span class="n">max_features</span><span class="p">)</span>
+
+<span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">fit_on_texts</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#print top 10 words </span>
+<span class="c1">#note zero is reserved for non frequent words</span>
+<span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">word_index</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">word</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>9 it
+6 is
+8 in
+4 of
+2 and
+3 a
+7 br
+1 the
+5 to
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#create int to word dictionary</span>
+<span class="n">wordDic</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">word_index</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">wordDic</span><span class="p">[</span><span class="n">value</span><span class="p">]</span> <span class="o">=</span> <span class="n">word</span>
+
+<span class="c1">#add a symbol for null placeholder</span>
+<span class="n">wordDic</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;!!!NA!!!&quot;</span>
+    
+<span class="k">print</span><span class="p">(</span><span class="n">wordDic</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">wordDic</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">wordDic</span><span class="p">[</span><span class="mi">32</span><span class="p">])</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>the
+and
+an
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#convert word strings to integer sequence lists</span>
+<span class="k">print</span><span class="p">(</span><span class="n">X_train</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">texts_to_sequences</span><span class="p">(</span><span class="n">X_train</span><span class="p">[:</span><span class="mi">1</span><span class="p">]))</span>
+<span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">texts_to_sequences</span><span class="p">(</span><span class="n">X_train</span><span class="p">[:</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">wordDic</span><span class="p">[</span><span class="n">value</span><span class="p">])</span>
+    
+<span class="n">X_train</span> <span class="o">=</span> <span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">texts_to_sequences</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
+<span class="n">X_test</span> <span class="o">=</span> <span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">texts_to_sequences</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Here&#39;s a gritty, get-the-bad guys revenge story starring a relentless and rough Denzel Washington. He&#39;s three personalities here: a down-and-out-low-key-now drunk- former mercenary, then a loving father-type person to a little girl and then a brutal maniac on the loose seeking answers and revenge.&lt;br /&gt;&lt;br /&gt;The story is about Washington hired to be a bodyguard for a little American girl living in Mexico, where kidnappings of children occur regularly (at least according to the movie.) He becomes attached to the kid, played winningly by THE child actress of our day, Dakota Fanning. When Fanning is kidnapped in front of him, Washington goes after the men responsible and spares no one. Beware: this film is not for the squeamish.&lt;br /&gt;&lt;br /&gt;This is stylish film-making, which is good and bad. I liked it, but a number of people found it too frenetic for their tastes as the camera-work is one that could give you a headache. I thought it fit the tense storyline and was fascinating to view, but it&#39;s (the shaky camera) not for all tastes.&lt;br /&gt;&lt;br /&gt;Besides the two stars, there is the always-interesting Christopher Walken, in an uncharacteristically low-key role, and a number of other fine actors.&lt;br /&gt;&lt;br /&gt;The film panders to the base emotions in all of us, but it works.
+[[1974, 3, 2539, 76, 1, 75, 490, 1057, 62, 1181, 3, 6162, 2, 2680, 3384, 2076, 237, 286, 3048, 130, 3, 177, 2, 43, 361, 1314, 147, 1816, 1135, 92, 3, 1711, 333, 549, 412, 5, 3, 114, 247, 2, 92, 3, 1767, 5046, 20, 1, 1885, 2985, 2754, 2, 1057, 7, 7, 1, 62, 6, 41, 2076, 2630, 5, 27, 3, 8240, 15, 3, 114, 295, 247, 578, 8, 2710, 118, 4, 473, 3914, 6945, 30, 219, 1790, 5, 1, 17, 26, 458, 3461, 5, 1, 551, 253, 31, 1, 503, 520, 4, 260, 248, 8820, 51, 8820, 6, 3528, 8, 1008, 4, 87, 2076, 268, 100, 1, 346, 1890, 2, 54, 28, 5515, 11, 19, 6, 21, 15, 1, 7, 7, 11, 6, 3003, 19, 228, 60, 6, 49, 2, 75, 10, 420, 9, 18, 3, 609, 4, 81, 255, 9, 96, 9831, 15, 65, 5178, 14, 1, 367, 154, 6, 28, 12, 97, 199, 22, 3, 6254, 10, 194, 9, 1180, 1, 3091, 766, 2, 13, 1426, 5, 647, 18, 42, 1, 5085, 367, 21, 15, 29, 5178, 7, 7, 1367, 1, 104, 378, 47, 6, 1, 207, 218, 1366, 3586, 8, 32, 361, 1314, 214, 2, 3, 609, 4, 82, 475, 153, 7, 7, 1, 19, 5, 1, 2807, 1435, 8, 29, 4, 175, 18, 9, 492]]
+here&#39;s
+a
+gritty
+get
+the
+bad
+guys
+revenge
+story
+starring
+a
+relentless
+and
+rough
+denzel
+washington
+he&#39;s
+three
+personalities
+here
+a
+down
+and
+out
+low
+key
+now
+drunk
+former
+then
+a
+loving
+father
+type
+person
+to
+a
+little
+girl
+and
+then
+a
+brutal
+maniac
+on
+the
+loose
+seeking
+answers
+and
+revenge
+br
+br
+the
+story
+is
+about
+washington
+hired
+to
+be
+a
+bodyguard
+for
+a
+little
+american
+girl
+living
+in
+mexico
+where
+of
+children
+occur
+regularly
+at
+least
+according
+to
+the
+movie
+he
+becomes
+attached
+to
+the
+kid
+played
+by
+the
+child
+actress
+of
+our
+day
+fanning
+when
+fanning
+is
+kidnapped
+in
+front
+of
+him
+washington
+goes
+after
+the
+men
+responsible
+and
+no
+one
+beware
+this
+film
+is
+not
+for
+the
+br
+br
+this
+is
+stylish
+film
+making
+which
+is
+good
+and
+bad
+i
+liked
+it
+but
+a
+number
+of
+people
+found
+it
+too
+frenetic
+for
+their
+tastes
+as
+the
+camera
+work
+is
+one
+that
+could
+give
+you
+a
+headache
+i
+thought
+it
+fit
+the
+tense
+storyline
+and
+was
+fascinating
+to
+view
+but
+it&#39;s
+the
+shaky
+camera
+not
+for
+all
+tastes
+br
+br
+besides
+the
+two
+stars
+there
+is
+the
+always
+interesting
+christopher
+walken
+in
+an
+low
+key
+role
+and
+a
+number
+of
+other
+fine
+actors
+br
+br
+the
+film
+to
+the
+base
+emotions
+in
+all
+of
+us
+but
+it
+works
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Censor the data by having a max review length (in number of words)</span>
+
+<span class="c1">#use this function to load data from keras pickle instead of munging as shown above</span>
+<span class="c1">#(X_train, y_train), (X_test, y_test) = imdb.load_data(nb_words=max_features,</span>
+<span class="c1">#                                                      test_split=0.2)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span> <span class="s1">&#39;train sequences&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">X_test</span><span class="p">),</span> <span class="s1">&#39;test sequences&#39;</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Pad sequences (samples x time)&quot;</span><span class="p">)</span>
+<span class="n">X_train</span> <span class="o">=</span> <span class="n">sequence</span><span class="o">.</span><span class="n">pad_sequences</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">maxlen</span><span class="o">=</span><span class="n">max_len</span><span class="p">)</span>
+<span class="n">X_test</span> <span class="o">=</span> <span class="n">sequence</span><span class="o">.</span><span class="n">pad_sequences</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">maxlen</span><span class="o">=</span><span class="n">max_len</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;X_train shape:&#39;</span><span class="p">,</span> <span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;X_test shape:&#39;</span><span class="p">,</span> <span class="n">X_test</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="n">y_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_train</span><span class="p">)</span>
+<span class="n">y_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>25000 train sequences
+25000 test sequences
+Pad sequences (samples x time)
+X_train shape: (25000, 200)
+X_test shape: (25000, 200)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[13]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#example of a sentence sequence, note that lower integers are words that occur more commonly</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;x:&quot;</span><span class="p">,</span> <span class="n">X_train</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="c1">#per observation vector of 20000 words</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;y:&quot;</span><span class="p">,</span> <span class="n">y_train</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="c1">#positive or negative review encoding</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>x: [ 177    2   43  361 1314  147 1816 1135   92    3 1711  333  549  412    5
+    3  114  247    2   92    3 1767 5046   20    1 1885 2985 2754    2 1057
+    7    7    1   62    6   41 2076 2630    5   27    3 8240   15    3  114
+  295  247  578    8 2710  118    4  473 3914 6945   30  219 1790    5    1
+   17   26  458 3461    5    1  551  253   31    1  503  520    4  260  248
+ 8820   51 8820    6 3528    8 1008    4   87 2076  268  100    1  346 1890
+    2   54   28 5515   11   19    6   21   15    1    7    7   11    6 3003
+   19  228   60    6   49    2   75   10  420    9   18    3  609    4   81
+  255    9   96 9831   15   65 5178   14    1  367  154    6   28   12   97
+  199   22    3 6254   10  194    9 1180    1 3091  766    2   13 1426    5
+  647   18   42    1 5085  367   21   15   29 5178    7    7 1367    1  104
+  378   47    6    1  207  218 1366 3586    8   32  361 1314  214    2    3
+  609    4   82  475  153    7    7    1   19    5    1 2807 1435    8   29
+    4  175   18    9  492]
+y: 1
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[14]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># double check that word sequences behave/final dimensions are as expected</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;y distribution:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="bp">True</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;max x word:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span> <span class="s2">&quot;; min x word&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">X_train</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;y distribution test:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="bp">True</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;max x word test:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">X_test</span><span class="p">),</span> <span class="s2">&quot;; min x word&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">X_test</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>y distribution: (array([0, 1]), array([12500, 12500]))
+max x word: 9999 ; min x word 0
+y distribution test: (array([0, 1]), array([12500, 12500]))
+max x word test: 9999 ; min x word 0
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[15]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="k">print</span><span class="p">(</span><span class="s2">&quot;most and least popular words: &quot;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="bp">True</span><span class="p">))</span>
+<span class="c1"># as expected zero is the highly used word for words not in index</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>most and least popular words: 
+(array([   0,    1,    2, ..., 9997, 9998, 9999], dtype=int32), array([1084314,  232315,  115675, ...,      18,      21,      29]))
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[16]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#set model hyper parameters</span>
+<span class="n">epochs</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="n">embedding_neurons</span> <span class="o">=</span> <span class="mi">128</span>
+<span class="n">lstm_neurons</span> <span class="o">=</span> <span class="mi">64</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">32</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[17]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Forward Pass LSTM Network</span>
+
+<span class="c1"># this is the placeholder tensor for the input sequences</span>
+<span class="n">sequence</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">max_len</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+<span class="c1"># this embedding layer will transform the sequences of integers</span>
+<span class="c1"># into vectors of size embedding</span>
+<span class="c1"># embedding layer converts dense int input to one-hot in real time to save memory</span>
+<span class="n">embedded</span> <span class="o">=</span> <span class="n">Embedding</span><span class="p">(</span><span class="n">max_features</span><span class="p">,</span> <span class="n">embedding_neurons</span><span class="p">,</span> <span class="n">input_length</span><span class="o">=</span><span class="n">max_len</span><span class="p">)(</span><span class="n">sequence</span><span class="p">)</span>
+<span class="c1"># normalize embeddings by input/word in sentence</span>
+<span class="n">bnorm</span> <span class="o">=</span> <span class="n">BatchNormalization</span><span class="p">()(</span><span class="n">embedded</span><span class="p">)</span>
+
+<span class="c1"># apply forwards LSTM layer size lstm_neurons</span>
+<span class="n">forwards</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="n">lstm_neurons</span><span class="p">,</span> <span class="n">dropout_W</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">dropout_U</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)(</span><span class="n">bnorm</span><span class="p">)</span>
+
+<span class="c1"># dropout </span>
+<span class="n">after_dp</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)(</span><span class="n">forwards</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;sigmoid&#39;</span><span class="p">)(</span><span class="n">after_dp</span><span class="p">)</span>
+
+<span class="n">model_fdir_atom</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">sequence</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
+<span class="c1"># review model structure</span>
+<span class="k">print</span><span class="p">(</span><span class="n">model_fdir_atom</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>____________________________________________________________________________________________________
+Layer (type)                     Output Shape          Param #     Connected to                     
+====================================================================================================
+input_1 (InputLayer)             (None, 200)           0                                            
+____________________________________________________________________________________________________
+embedding_1 (Embedding)          (None, 200, 128)      1280000     input_1[0][0]                    
+____________________________________________________________________________________________________
+batchnormalization_1 (BatchNormal(None, 200, 128)      256         embedding_1[0][0]                
+____________________________________________________________________________________________________
+lstm_1 (LSTM)                    (None, 64)            49408       batchnormalization_1[0][0]       
+____________________________________________________________________________________________________
+dropout_1 (Dropout)              (None, 64)            0           lstm_1[0][0]                     
+____________________________________________________________________________________________________
+dense_1 (Dense)                  (None, 1)             65          dropout_1[0][0]                  
+====================================================================================================
+Total params: 1329729
+____________________________________________________________________________________________________
+None
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[18]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Forward pass LSTM network</span>
+
+<span class="c1"># try using different optimizers and different optimizer configs</span>
+<span class="n">model_fdir_atom</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span> <span class="s1">&#39;binary_crossentropy&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;accuracy&#39;</span><span class="p">])</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Train...&#39;</span><span class="p">)</span>
+<span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+<span class="n">history_fdir_atom</span> <span class="o">=</span> <span class="n">model_fdir_atom</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span>
+                    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                    <span class="n">nb_epoch</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+                    <span class="n">validation_data</span><span class="o">=</span><span class="p">[</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">],</span> 
+                    <span class="n">verbose</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">average_time_per_epoch</span> <span class="o">=</span> <span class="p">(</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">/</span> <span class="n">epochs</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;avg sec per epoch:&quot;</span><span class="p">,</span> <span class="n">average_time_per_epoch</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Train...
+Train on 25000 samples, validate on 25000 samples
+Epoch 1/6
+387s - loss: 0.5194 - acc: 0.7319 - val_loss: 0.3669 - val_acc: 0.8514
+Epoch 2/6
+405s - loss: 0.2996 - acc: 0.8808 - val_loss: 0.3170 - val_acc: 0.8678
+Epoch 3/6
+343s - loss: 0.2100 - acc: 0.9184 - val_loss: 0.3833 - val_acc: 0.8556
+Epoch 4/6
+349s - loss: 0.1695 - acc: 0.9362 - val_loss: 0.3743 - val_acc: 0.8681
+Epoch 5/6
+320s - loss: 0.1246 - acc: 0.9556 - val_loss: 0.4199 - val_acc: 0.8654
+Epoch 6/6
+350s - loss: 0.0975 - acc: 0.9648 - val_loss: 0.4894 - val_acc: 0.8600
+avg sec per epoch: 368.793916345
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[20]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Bi-directional Atom</span>
+
+<span class="c1"># based on keras tutorial: https://github.com/fchollet/keras/blob/master/examples/imdb_bidirectional_lstm.py</span>
+
+<span class="c1"># this is the placeholder tensor for the input sequences</span>
+<span class="n">sequence</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">max_len</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+<span class="c1"># this embedding layer will transform the sequences of integers</span>
+<span class="c1"># into vectors of size embedding</span>
+<span class="c1"># embedding layer converts dense int input to one-hot in real time to save memory</span>
+<span class="n">embedded</span> <span class="o">=</span> <span class="n">Embedding</span><span class="p">(</span><span class="n">max_features</span><span class="p">,</span> <span class="n">embedding_neurons</span><span class="p">,</span> <span class="n">input_length</span><span class="o">=</span><span class="n">max_len</span><span class="p">)(</span><span class="n">sequence</span><span class="p">)</span>
+<span class="c1"># normalize embeddings by input/word in sentence</span>
+<span class="n">bnorm</span> <span class="o">=</span> <span class="n">BatchNormalization</span><span class="p">()(</span><span class="n">embedded</span><span class="p">)</span>
+
+<span class="c1"># apply forwards LSTM layer size lstm_neurons</span>
+<span class="n">forwards</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="n">lstm_neurons</span><span class="p">,</span> <span class="n">dropout_W</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">dropout_U</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)(</span><span class="n">bnorm</span><span class="p">)</span>
+<span class="c1"># apply backwards LSTM</span>
+<span class="n">backwards</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="n">lstm_neurons</span><span class="p">,</span> <span class="n">dropout_W</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">dropout_U</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">go_backwards</span><span class="o">=</span><span class="bp">True</span><span class="p">)(</span><span class="n">bnorm</span><span class="p">)</span>
+
+<span class="c1"># concatenate the outputs of the 2 LSTMs</span>
+<span class="n">merged</span> <span class="o">=</span> <span class="n">merge</span><span class="p">([</span><span class="n">forwards</span><span class="p">,</span> <span class="n">backwards</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;concat&#39;</span><span class="p">,</span> <span class="n">concat_axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">after_dp</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)(</span><span class="n">merged</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;sigmoid&#39;</span><span class="p">)(</span><span class="n">after_dp</span><span class="p">)</span>
+
+<span class="n">model_bidir_atom</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">sequence</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
+<span class="c1"># review model structure</span>
+<span class="k">print</span><span class="p">(</span><span class="n">model_bidir_atom</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>____________________________________________________________________________________________________
+Layer (type)                     Output Shape          Param #     Connected to                     
+====================================================================================================
+input_2 (InputLayer)             (None, 200)           0                                            
+____________________________________________________________________________________________________
+embedding_2 (Embedding)          (None, 200, 128)      1280000     input_2[0][0]                    
+____________________________________________________________________________________________________
+batchnormalization_2 (BatchNormal(None, 200, 128)      256         embedding_2[0][0]                
+____________________________________________________________________________________________________
+lstm_2 (LSTM)                    (None, 64)            49408       batchnormalization_2[0][0]       
+____________________________________________________________________________________________________
+lstm_3 (LSTM)                    (None, 64)            49408       batchnormalization_2[0][0]       
+____________________________________________________________________________________________________
+merge_1 (Merge)                  (None, 128)           0           lstm_2[0][0]                     
+                                                                   lstm_3[0][0]                     
+____________________________________________________________________________________________________
+dropout_2 (Dropout)              (None, 128)           0           merge_1[0][0]                    
+____________________________________________________________________________________________________
+dense_2 (Dense)                  (None, 1)             129         dropout_2[0][0]                  
+====================================================================================================
+Total params: 1379201
+____________________________________________________________________________________________________
+None
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[21]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Bi-directional Atom</span>
+
+<span class="c1"># try using different optimizers and different optimizer configs</span>
+<span class="n">model_bidir_atom</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span> <span class="s1">&#39;binary_crossentropy&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;accuracy&#39;</span><span class="p">])</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Train...&#39;</span><span class="p">)</span>
+<span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+<span class="n">history_bidir_atom</span> <span class="o">=</span> <span class="n">model_bidir_atom</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span>
+                    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                    <span class="n">nb_epoch</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+                    <span class="n">validation_data</span><span class="o">=</span><span class="p">[</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">],</span> 
+                    <span class="n">verbose</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">average_time_per_epoch</span> <span class="o">=</span> <span class="p">(</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">/</span> <span class="n">epochs</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;avg sec per epoch:&quot;</span><span class="p">,</span> <span class="n">average_time_per_epoch</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Train...
+Train on 25000 samples, validate on 25000 samples
+Epoch 1/6
+635s - loss: 0.5909 - acc: 0.6729 - val_loss: 0.4145 - val_acc: 0.8260
+Epoch 2/6
+660s - loss: 0.3806 - acc: 0.8371 - val_loss: 0.4096 - val_acc: 0.8499
+Epoch 3/6
+656s - loss: 0.2828 - acc: 0.8862 - val_loss: 0.3524 - val_acc: 0.8632
+Epoch 4/6
+636s - loss: 0.2249 - acc: 0.9148 - val_loss: 0.3772 - val_acc: 0.8645
+Epoch 5/6
+606s - loss: 0.1830 - acc: 0.9317 - val_loss: 0.4205 - val_acc: 0.8641
+Epoch 6/6
+615s - loss: 0.1514 - acc: 0.9428 - val_loss: 0.4554 - val_acc: 0.8640
+avg sec per epoch: 644.418573181
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[22]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># run simple linear regression to compare performance</span>
+
+<span class="c1">#based on grid search done by: </span>
+<span class="c1">#https://github.com/rasbt/python-machine-learning-book/blob/master/code/ch08/ch08.ipynb</span>
+
+<span class="c1">#the tfidf vectors capture co-occurance statistics, think of each number representing how many times </span>
+<span class="c1">#a word occured in a text and scaled by word frequency</span>
+
+<span class="n">tfidfTokenizer</span> <span class="o">=</span> <span class="n">Tokenizer</span><span class="p">(</span><span class="n">nb_words</span><span class="o">=</span><span class="n">max_features</span><span class="p">)</span>
+<span class="n">tfidfTokenizer</span><span class="o">.</span><span class="n">fit_on_sequences</span><span class="p">(</span><span class="n">X_train</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<span class="n">X_train_tfidf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tfidfTokenizer</span><span class="o">.</span><span class="n">sequences_to_matrix</span><span class="p">(</span><span class="n">X_train</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;tfidf&quot;</span><span class="p">))</span>
+<span class="n">X_test_tfidf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tfidfTokenizer</span><span class="o">.</span><span class="n">sequences_to_matrix</span><span class="p">(</span><span class="n">X_test</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;tfidf&quot;</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[23]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#check tfidf matrix</span>
+<span class="k">print</span><span class="p">(</span><span class="n">X_train_tfidf</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">X_train_tfidf</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">X_test_tfidf</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[[ 0.          2.53756219  2.09414849 ...,  0.          0.          0.        ]
+ [ 5.53114288  2.14733479  1.49183293 ...,  0.          0.          0.        ]
+ [ 0.          2.48588573  2.09414849 ...,  0.          0.          0.        ]
+ ..., 
+ [ 5.20620903  1.94673033  1.69633644 ...,  0.          0.          0.        ]
+ [ 0.          2.22946644  1.85496169 ...,  0.          0.          0.        ]
+ [ 0.          2.78627629  1.49183293 ...,  0.          0.          0.        ]]
+(25000, 10000) (25000, 10000)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[24]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>
+
+<span class="n">model_tfidf_reg</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l2&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">model_tfidf_reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train_tfidf</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[LibLinear]</pre>
+</div>
+</div>
+
+<div class="output_area"><div class="prompt output_prompt">Out[24]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>LogisticRegression(C=0.001, class_weight=None, dual=False, fit_intercept=True,
+          intercept_scaling=1, max_iter=100, multi_class=&#39;ovr&#39;, n_jobs=1,
+          penalty=&#39;l2&#39;, random_state=0, solver=&#39;liblinear&#39;, tol=0.0001,
+          verbose=1, warm_start=False)</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[25]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">accuracy_score</span>
+<span class="c1">#calculate test and train accuracy</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;train acc:&quot;</span><span class="p">,</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">model_tfidf_reg</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_train_tfidf</span><span class="p">)))</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;test acc:&quot;</span><span class="p">,</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">model_tfidf_reg</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test_tfidf</span><span class="p">)))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>train acc: 0.9352
+test acc: 0.88188
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[26]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#get weights from embedding layer and visualize</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">model_bidir_atom</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_config</span><span class="p">())</span>
+<span class="n">embmatrix</span> <span class="o">=</span> <span class="n">model_bidir_atom</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">print</span><span class="p">(</span><span class="n">embmatrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>{&#39;W_constraint&#39;: None, &#39;activity_regularizer&#39;: None, &#39;name&#39;: &#39;embedding_2&#39;, &#39;output_dim&#39;: 128, &#39;trainable&#39;: True, &#39;init&#39;: &#39;uniform&#39;, &#39;input_dtype&#39;: &#39;int32&#39;, &#39;mask_zero&#39;: False, &#39;batch_input_shape&#39;: (None, 200), &#39;W_regularizer&#39;: None, &#39;dropout&#39;: 0.0, &#39;input_dim&#39;: 10000, &#39;input_length&#39;: 200}
+(10000, 128)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[27]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.manifold</span> <span class="kn">import</span> <span class="n">TSNE</span>
+<span class="n">topnwords</span> <span class="o">=</span> <span class="mi">5000</span>
+<span class="n">toptsne</span> <span class="o">=</span> <span class="n">TSNE</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">tsneXY</span> <span class="o">=</span> <span class="n">toptsne</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">embmatrix</span><span class="p">[:</span><span class="n">topnwords</span><span class="p">,</span> <span class="p">:])</span> 
+<span class="n">tsneXY</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[27]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>(5000, 2)</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[28]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="n">displaytopnwords</span> <span class="o">=</span> <span class="mi">250</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">tsneXY</span><span class="p">[:</span><span class="n">displaytopnwords</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">tsneXY</span><span class="p">[:</span><span class="n">displaytopnwords</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">displaytopnwords</span><span class="p">):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">wordDic</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="n">tsneXY</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">tsneXY</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+<span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">25</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+
+
+<div class="output_png output_subarea ">
+<img src="javascript://"/>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[29]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Bi-directional rmsprop</span>
+
+<span class="c1"># this example illistrate&#39;s that choice of optimizer is an important hyper-parameter for RNNs</span>
+<span class="c1"># rmsprop gives substancially better results than atom</span>
+<span class="c1"># in the literature these two optimizers commonly do well on RNNs</span>
+
+<span class="c1"># this is the placeholder tensor for the input sequences</span>
+<span class="n">sequence</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">max_len</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+<span class="c1"># this embedding layer will transform the sequences of integers</span>
+<span class="c1"># into vectors of size embedding</span>
+<span class="c1"># embedding layer converts dense int input to one-hot in real time to save memory</span>
+<span class="n">embedded</span> <span class="o">=</span> <span class="n">Embedding</span><span class="p">(</span><span class="n">max_features</span><span class="p">,</span> <span class="n">embedding_neurons</span><span class="p">,</span> <span class="n">input_length</span><span class="o">=</span><span class="n">max_len</span><span class="p">)(</span><span class="n">sequence</span><span class="p">)</span>
+<span class="c1"># normalize embeddings by input/word in sentence</span>
+<span class="n">bnorm</span> <span class="o">=</span> <span class="n">BatchNormalization</span><span class="p">()(</span><span class="n">embedded</span><span class="p">)</span>
+
+<span class="c1"># apply forwards LSTM layer size lstm_neurons</span>
+<span class="n">forwards</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="n">lstm_neurons</span><span class="p">,</span> <span class="n">dropout_W</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">dropout_U</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)(</span><span class="n">bnorm</span><span class="p">)</span>
+<span class="c1"># apply backwards LSTM</span>
+<span class="n">backwards</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="n">lstm_neurons</span><span class="p">,</span> <span class="n">dropout_W</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">dropout_U</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">go_backwards</span><span class="o">=</span><span class="bp">True</span><span class="p">)(</span><span class="n">bnorm</span><span class="p">)</span>
+
+<span class="c1"># concatenate the outputs of the 2 LSTMs</span>
+<span class="n">merged</span> <span class="o">=</span> <span class="n">merge</span><span class="p">([</span><span class="n">forwards</span><span class="p">,</span> <span class="n">backwards</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;concat&#39;</span><span class="p">,</span> <span class="n">concat_axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">after_dp</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)(</span><span class="n">merged</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;sigmoid&#39;</span><span class="p">)(</span><span class="n">after_dp</span><span class="p">)</span>
+
+<span class="n">model_bidir_rmsprop</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">sequence</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
+<span class="c1"># review model structure</span>
+<span class="k">print</span><span class="p">(</span><span class="n">model_bidir_rmsprop</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>____________________________________________________________________________________________________
+Layer (type)                     Output Shape          Param #     Connected to                     
+====================================================================================================
+input_3 (InputLayer)             (None, 200)           0                                            
+____________________________________________________________________________________________________
+embedding_3 (Embedding)          (None, 200, 128)      1280000     input_3[0][0]                    
+____________________________________________________________________________________________________
+batchnormalization_3 (BatchNormal(None, 200, 128)      256         embedding_3[0][0]                
+____________________________________________________________________________________________________
+lstm_4 (LSTM)                    (None, 64)            49408       batchnormalization_3[0][0]       
+____________________________________________________________________________________________________
+lstm_5 (LSTM)                    (None, 64)            49408       batchnormalization_3[0][0]       
+____________________________________________________________________________________________________
+merge_2 (Merge)                  (None, 128)           0           lstm_4[0][0]                     
+                                                                   lstm_5[0][0]                     
+____________________________________________________________________________________________________
+dropout_3 (Dropout)              (None, 128)           0           merge_2[0][0]                    
+____________________________________________________________________________________________________
+dense_3 (Dense)                  (None, 1)             129         dropout_3[0][0]                  
+====================================================================================================
+Total params: 1379201
+____________________________________________________________________________________________________
+None
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[31]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Bi-directional rmsprop</span>
+
+<span class="n">model_bidir_rmsprop</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;rmsprop&#39;</span><span class="p">,</span> <span class="s1">&#39;binary_crossentropy&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;accuracy&#39;</span><span class="p">])</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Train...&#39;</span><span class="p">)</span>
+<span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+<span class="n">history_bidir_rmsprop</span> <span class="o">=</span> <span class="n">model_bidir_rmsprop</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span>
+                    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                    <span class="n">nb_epoch</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+                    <span class="n">validation_data</span><span class="o">=</span><span class="p">[</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">],</span> 
+                    <span class="n">verbose</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">average_time_per_epoch</span> <span class="o">=</span> <span class="p">(</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">/</span> <span class="n">epochs</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;avg sec per epoch:&quot;</span><span class="p">,</span> <span class="n">average_time_per_epoch</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Train...
+</pre>
+</div>
+</div>
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>INFO (theano.gof.compilelock): Refreshing lock /home/nv/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-jessie-sid-x86_64-2.7.12-64/lock_dir/lock
+</pre>
+</div>
+</div>
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Train on 25000 samples, validate on 25000 samples
+Epoch 1/6
+721s - loss: 0.5745 - acc: 0.6842 - val_loss: 0.5299 - val_acc: 0.7867
+Epoch 2/6
+605s - loss: 0.3705 - acc: 0.8439 - val_loss: 0.3479 - val_acc: 0.8684
+Epoch 3/6
+573s - loss: 0.2817 - acc: 0.8889 - val_loss: 0.3336 - val_acc: 0.8798
+Epoch 4/6
+610s - loss: 0.2387 - acc: 0.9077 - val_loss: 0.3566 - val_acc: 0.8770
+Epoch 5/6
+584s - loss: 0.2112 - acc: 0.9218 - val_loss: 0.3495 - val_acc: 0.8809
+Epoch 6/6
+592s - loss: 0.1857 - acc: 0.9309 - val_loss: 0.3884 - val_acc: 0.8770
+avg sec per epoch: 620.017516812
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[32]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#get weights from embedding layer and visualize</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">model_bidir_rmsprop</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_config</span><span class="p">())</span>
+<span class="n">embmatrix</span> <span class="o">=</span> <span class="n">model_bidir_rmsprop</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">print</span><span class="p">(</span><span class="n">embmatrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>{&#39;W_constraint&#39;: None, &#39;activity_regularizer&#39;: None, &#39;name&#39;: &#39;embedding_3&#39;, &#39;output_dim&#39;: 128, &#39;trainable&#39;: True, &#39;init&#39;: &#39;uniform&#39;, &#39;input_dtype&#39;: &#39;int32&#39;, &#39;mask_zero&#39;: False, &#39;batch_input_shape&#39;: (None, 200), &#39;W_regularizer&#39;: None, &#39;dropout&#39;: 0.0, &#39;input_dim&#39;: 10000, &#39;input_length&#39;: 200}
+(10000, 128)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[33]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.manifold</span> <span class="kn">import</span> <span class="n">TSNE</span>
+<span class="n">topnwords</span> <span class="o">=</span> <span class="mi">5000</span>
+<span class="n">toptsne</span> <span class="o">=</span> <span class="n">TSNE</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">tsneXY</span> <span class="o">=</span> <span class="n">toptsne</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">embmatrix</span><span class="p">[:</span><span class="n">topnwords</span><span class="p">,</span> <span class="p">:])</span> 
+<span class="n">tsneXY</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[33]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>(5000, 2)</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[35]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="n">displaytopnwords</span> <span class="o">=</span> <span class="mi">250</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">tsneXY</span><span class="p">[:</span><span class="n">displaytopnwords</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">tsneXY</span><span class="p">[:</span><span class="n">displaytopnwords</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">displaytopnwords</span><span class="p">):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">wordDic</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="n">tsneXY</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">tsneXY</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+<span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">25</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="c1"># notice that great, most, well are clustered</span>
+<span class="c1"># bad don&#39;t even are clustered</span>
+<span class="c1"># We&#39;ve learned structure in our sentiment embedding</span>
+<span class="c1"># neural networks give us this and other useful features for free</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+
+
+<div class="output_png output_subarea ">
+<img src="javascript://"/>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[37]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1">#guide to chart above</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">displaytopnwords</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">((</span><span class="n">tsneXY</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">tsneXY</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">wordDic</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>(9.1211692360485888, 3.3552482852105676, &#39;!!!NA!!!&#39;)
+(-7.2644603398758392, 0.85623484414007378, &#39;the&#39;)
+(-5.582567206511027, -1.2177951558293023, &#39;and&#39;)
+(-4.4273495051914242, 2.911185050237155, &#39;a&#39;)
+(-5.4973410617344447, -1.2591324915722879, &#39;of&#39;)
+(-4.0366726879824721, 2.2548322902151607, &#39;to&#39;)
+(-4.383855036639976, -1.3105004141292329, &#39;is&#39;)
+(-2.7085226486866909, -3.3754355804585705, &#39;br&#39;)
+(-1.4218316898014791, -1.5408734940116677, &#39;in&#39;)
+(-5.1257651545397094, -4.5989591637595684, &#39;it&#39;)
+(-5.3667350166442764, 1.549921539891653, &#39;i&#39;)
+(-1.1325155048811215, -2.9399067570314772, &#39;this&#39;)
+(-5.5702449759336261, 0.97744084617167037, &#39;that&#39;)
+(-3.3528798064274206, -3.0532338222347368, &#39;was&#39;)
+(-6.177514726109627, -0.23510272792882372, &#39;as&#39;)
+(-5.6075017891167018, -1.8646128990918505, &#39;for&#39;)
+(-4.7523456620900024, -6.4140369557827013, &#39;with&#39;)
+(-3.9327567671782688, -6.0279587395764072, &#39;movie&#39;)
+(0.42985409846709755, -0.24456759763656638, &#39;but&#39;)
+(-5.9316355864741155, -4.0784487974359163, &#39;film&#39;)
+(-5.9401240896718388, -1.6111132516576014, &#39;on&#39;)
+(1.0978680301529811, -0.19535939056273438, &#39;not&#39;)
+(-2.9597483343308082, -6.5670411623399287, &#39;you&#39;)
+(-3.3489778995774606, -0.98391478999090964, &#39;are&#39;)
+(-4.2985294176054403, -1.2561910573031525, &#39;his&#39;)
+(-6.3828381553612079, -2.8941622133997256, &#39;have&#39;)
+(-3.3922874353146044, -2.4186367689334038, &#39;he&#39;)
+(-5.5995818142060605, -3.5445398676732629, &#39;be&#39;)
+(-1.2995917172778786, -5.8146318802879389, &#39;one&#39;)
+(-5.4968946150387543, 3.1160919419479121, &#39;all&#39;)
+(-3.7670615621141192, -4.168124839649586, &#39;at&#39;)
+(-4.5737578683029447, -2.8827239829689479, &#39;by&#39;)
+(-6.165832337120591, -1.2858819008329687, &#39;an&#39;)
+(-4.9991630985846633, -1.633479446104388, &#39;they&#39;)
+(-5.2910832175745961, 2.5576130599734714, &#39;who&#39;)
+(-5.1896827984658316, -0.10149043189996521, &#39;so&#39;)
+(-3.8775655265796547, -2.7975413658651895, &#39;from&#39;)
+(-5.6512721870895231, 0.056665573743656932, &#39;like&#39;)
+(-2.140469090396564, -2.9578315202812684, &#39;her&#39;)
+(-4.3336074784285952, -2.1798507558528466, &#39;or&#39;)
+(0.34936695400468742, -1.2154786979602663, &#39;just&#39;)
+(-4.5753405700554453, 0.7981214125705608, &#39;about&#39;)
+(-6.1901876255409611, 2.9389625709183984, &quot;it&#39;s&quot;)
+(-5.9926287412894741, -4.1981097081870793, &#39;out&#39;)
+(-5.212806709851165, 0.084253389410884616, &#39;has&#39;)
+(-1.3197057199094018, -2.257103754451363, &#39;if&#39;)
+(-5.6987612632758768, -2.3175619856948524, &#39;some&#39;)
+(-4.0378414722868197, -4.9639128559266004, &#39;there&#39;)
+(-4.8756283090330115, -1.7337855849213466, &#39;what&#39;)
+(-4.8724662792115332, 3.177907227986644, &#39;good&#39;)
+(-4.0649842065828867, -6.9376496639421097, &#39;more&#39;)
+(-2.8235063384650414, 1.4464507254200525, &#39;when&#39;)
+(-6.409700640281998, 2.618851021514975, &#39;very&#39;)
+(-6.7348152826270136, -0.54971379206277193, &#39;up&#39;)
+(2.4603302285663577, -3.928537233209731, &#39;no&#39;)
+(-3.1527978359637143, -6.1259315412605879, &#39;time&#39;)
+(-4.8864000133772576, 3.8455361472691219, &#39;she&#39;)
+(-7.7456089106931216, 3.4308395110929282, &#39;even&#39;)
+(-3.1308834251779243, 3.8624303629656271, &#39;my&#39;)
+(-3.0458786751521303, -2.0442747205250003, &#39;would&#39;)
+(-5.4328618122870083, -3.3671722377437741, &#39;which&#39;)
+(3.5235221099567915, -1.4264510819230523, &#39;only&#39;)
+(-5.1748761846678217, -3.6771769811832247, &#39;story&#39;)
+(-2.2794664712668968, -4.4463793130550631, &#39;really&#39;)
+(1.5725183301851537, 5.6717218500589341, &#39;see&#39;)
+(-5.1249050926290538, -3.9127390275785423, &#39;their&#39;)
+(-4.5730267534057933, -3.6009169173387066, &#39;had&#39;)
+(-4.9419399782692262, 3.4764629961204228, &#39;can&#39;)
+(-8.0036878520404393, -0.61389605231728805, &#39;were&#39;)
+(-7.1972744067584093, -2.8819658107662622, &#39;me&#39;)
+(6.22953658541255, 4.1230897619441809, &#39;well&#39;)
+(-5.5691936401932782, -2.0629803318210538, &#39;than&#39;)
+(-5.5739257874264414, 0.95264113385131721, &#39;we&#39;)
+(-4.6720559668058881, -4.2193822973882025, &#39;much&#39;)
+(-1.4729082979351917, -3.8919967491490413, &#39;been&#39;)
+(10.889828677170922, -4.7271413502038735, &#39;bad&#39;)
+(-3.8540033718313733, 1.9198727464419594, &#39;get&#39;)
+(-7.1361473612640056, -3.205664757450188, &#39;will&#39;)
+(-4.013939175206386, -6.7871793940589153, &#39;do&#39;)
+(-4.4859141438087926, 2.0425488717949598, &#39;also&#39;)
+(-7.4438580744366831, 1.3737926218368226, &#39;into&#39;)
+(-5.8804038338635154, -3.8923009290140258, &#39;people&#39;)
+(-1.5286438025894569, 0.1637821863098925, &#39;other&#39;)
+(2.662523615330771, 2.7394599551157732, &#39;first&#39;)
+(8.9596249243806412, 5.4540713725281842, &#39;great&#39;)
+(-0.73116770307265944, -0.57903966882446622, &#39;because&#39;)
+(-1.3376631252945936, -2.3433752740017249, &#39;how&#39;)
+(-1.8955108346203497, 5.1375374228756092, &#39;him&#39;)
+(-1.1488599666039039, 7.3889416037151765, &#39;most&#39;)
+(-5.5605601849711972, 0.10789339710138118, &quot;don&#39;t&quot;)
+(-4.9656668361124474, -4.6983194795934864, &#39;made&#39;)
+(-3.8513725737171054, 2.8844207149498957, &#39;its&#39;)
+(-4.632764514234621, 0.10689506195314502, &#39;then&#39;)
+(-6.0717888214630928, -4.1923680558363596, &#39;way&#39;)
+(-3.4244077696003838, 5.8934982022325562, &#39;make&#39;)
+(-4.4568699659171411, -4.6950828475790862, &#39;them&#39;)
+(-7.4587826703497084, -1.3957904522793616, &#39;too&#39;)
+(2.5230436936454765, -5.3247958508001441, &#39;could&#39;)
+(4.3154393693549107, -5.9844159805699242, &#39;any&#39;)
+(-4.6835669256141639, -6.0951513639335531, &#39;movies&#39;)
+(-5.6110289356944465, -2.9021707984891707, &#39;after&#39;)
+(-6.3136098656374235, 0.94166543138357217, &#39;think&#39;)
+(-1.6441687592065848, -4.3929171700112182, &#39;characters&#39;)
+(-4.1484851285175566, -5.7622918755466861, &#39;watch&#39;)
+(-2.7834285030140848, -6.3860872262371808, &#39;two&#39;)
+(-3.8894680460636502, -6.1196847567326609, &#39;films&#39;)
+(-7.0389270174969436, -3.7829352369948364, &#39;character&#39;)
+(3.7568513855725421, 7.9242586044545957, &#39;seen&#39;)
+(-2.5059997833083281, -5.480415929547676, &#39;many&#39;)
+(-1.5361017161470376, -1.1491189745891888, &#39;being&#39;)
+(-0.28748360096605136, 5.311986561672982, &#39;life&#39;)
+(-8.0795392354782951, -2.7195747647947037, &#39;plot&#39;)
+(-3.7684559655568752, -5.479805309254612, &#39;never&#39;)
+(-2.0952003559216026, -5.6715291346067058, &#39;acting&#39;)
+(-5.4954135780751399, 0.10922726390067503, &#39;little&#39;)
+(8.9901454957530689, 5.0465323374722875, &#39;best&#39;)
+(5.0186793896500301, 5.1120566515812573, &#39;love&#39;)
+(-3.308617029198889, -5.0955795841933247, &#39;over&#39;)
+(-0.28207796473115082, 0.75590724603676696, &#39;where&#39;)
+(-4.3116860560572112, -5.4015285621945965, &#39;did&#39;)
+(-3.9590857594333997, -1.5742624291358314, &#39;show&#39;)
+(-4.743193721459888, -5.0526805288607033, &#39;know&#39;)
+(-5.2929823533313103, -4.3224085147524942, &#39;off&#39;)
+(1.9586053516468693, 3.0054965656457422, &#39;ever&#39;)
+(-4.1046466975241023, -2.6610863642815619, &#39;does&#39;)
+(-0.74981332233081255, -4.4729430355267485, &#39;better&#39;)
+(-3.8250366383086729, -5.5831753738353962, &#39;your&#39;)
+(-3.0993096730588299, -4.7227461574867888, &#39;end&#39;)
+(4.3413088804461246, 5.0193491409785604, &#39;still&#39;)
+(-6.2125086954334297, 3.9197218726625347, &#39;man&#39;)
+(2.2977889355483501, -4.6905809811864252, &#39;here&#39;)
+(-5.6680250728478221, -4.8796543651460951, &#39;these&#39;)
+(-5.9547049482878149, -0.85056875348720729, &#39;say&#39;)
+(-7.8434218108218303, -2.6183472281285702, &#39;scene&#39;)
+(1.2774740272050886, -5.6302893170315063, &#39;while&#39;)
+(-6.96072255113988, -1.4823472750556488, &#39;why&#39;)
+(2.2156276072625865, -0.24128267411125223, &#39;scenes&#39;)
+(-4.8076325424627093, -4.9627110919499353, &#39;go&#39;)
+(-2.3633424820747191, -3.6274287649699284, &#39;such&#39;)
+(-7.405378486125338, -3.0259128078693855, &#39;something&#39;)
+(-5.5155670175667888, -1.989246452659293, &#39;through&#39;)
+(-3.5631552734248015, -5.5452553303168894, &#39;should&#39;)
+(-4.045300285190284, -6.2353992392190101, &#39;back&#39;)
+(0.85286682870630803, -6.9096358600457375, &quot;i&#39;m&quot;)
+(-2.0126485730114285, 3.5661922689690169, &#39;real&#39;)
+(-6.6238421867383321, -3.4361982851590711, &#39;those&#39;)
+(-5.2324839372975482, -4.0301155426938706, &#39;watching&#39;)
+(3.9058523985958185, 3.8619391636137581, &#39;now&#39;)
+(-6.4113670288181988, 0.67559008571048751, &#39;though&#39;)
+(5.2336205339284536, -5.2669508320066667, &quot;doesn&#39;t&quot;)
+(-6.1035559073106782, 0.88951710179300136, &#39;years&#39;)
+(-5.4183979988908249, -2.7019618296505672, &#39;old&#39;)
+(-2.435311246336938, -3.11791409021858, &#39;thing&#39;)
+(-2.8721690135579037, -3.0908751635093861, &#39;actors&#39;)
+(-4.2160194904645838, -6.8058525304073756, &#39;work&#39;)
+(1.5461288449104116, -8.0163432612061811, &#39;10&#39;)
+(-3.4188562785316949, -3.1594718764492842, &#39;before&#39;)
+(-2.9515663450980636, 4.2546675421278684, &#39;another&#39;)
+(2.3090666541873524, -3.9960201562036946, &quot;didn&#39;t&quot;)
+(-5.3830332166411097, -5.5030005190123514, &#39;new&#39;)
+(-3.7512930093262731, -5.4526573821574553, &#39;funny&#39;)
+(8.5329959905828208, -3.8869844121163872, &#39;nothing&#39;)
+(-7.7759185332888032, -2.6392637983879221, &#39;actually&#39;)
+(4.3520393763842105, 8.3920662709006475, &#39;makes&#39;)
+(3.5807126476109583, 2.1957339231566815, &#39;director&#39;)
+(-1.7391776606925933, -6.5931228514952531, &#39;look&#39;)
+(-2.1396790218550858, 3.7635001142664879, &#39;find&#39;)
+(2.837448162518097, -3.3070383993584729, &#39;going&#39;)
+(-2.404032674183187, -2.270162741129238, &#39;few&#39;)
+(0.93557963316607384, -1.5484431829540963, &#39;same&#39;)
+(-3.6956781016877231, -4.6795491372568367, &#39;part&#39;)
+(-3.8040673700016607, -6.3147595988731657, &#39;again&#39;)
+(-4.3368658060992447, -1.655968049144759, &#39;every&#39;)
+(-6.6999131049807685, -0.44314330605111185, &#39;lot&#39;)
+(1.1393714646020969, 2.4429289130712353, &#39;cast&#39;)
+(5.593465323222178, 6.2999076670423886, &#39;us&#39;)
+(4.9043936710013938, 8.4169014128376531, &#39;quite&#39;)
+(1.1364111598001807, -4.8667956602777327, &#39;down&#39;)
+(3.4227609413521911, -6.586581743597149, &#39;want&#39;)
+(4.2702481076056129, 5.4365629561745292, &#39;world&#39;)
+(-3.3740010202624857, 5.4412566946005363, &#39;things&#39;)
+(-4.6794984669898527, 0.18612598371116024, &#39;pretty&#39;)
+(-5.4662260003454257, 1.2602019231067867, &#39;young&#39;)
+(6.8634310651981476, -2.0977153968067443, &#39;seems&#39;)
+(-2.414787863737649, -5.1126209992661167, &#39;around&#39;)
+(-5.3262411808001859, -1.0288415463767113, &#39;got&#39;)
+(-5.1095604084376687, -3.9679177320410761, &#39;horror&#39;)
+(0.41111159030379152, -2.39955939409472, &#39;however&#39;)
+(-0.96031115552927726, 2.1709736905035859, &quot;can&#39;t&quot;)
+(-5.6570341438196534, 0.26022471831302696, &#39;fact&#39;)
+(-0.53419597467402802, 3.7999290148883786, &#39;take&#39;)
+(-3.4699300588914284, 3.570825675985045, &#39;big&#39;)
+(3.6104893057778202, -0.98264056249305576, &#39;enough&#39;)
+(-4.0330895798237298, -0.77682628836111955, &#39;long&#39;)
+(0.93520264596561564, 4.3760806834112076, &#39;thought&#39;)
+(-0.96273309144084362, -5.9960319157748962, &quot;that&#39;s&quot;)
+(2.9085382874605448, 4.4232447609782186, &#39;both&#39;)
+(-1.9351104602005782, 6.4031161809264683, &#39;between&#39;)
+(-2.8884826596778659, 6.5850673172686607, &#39;series&#39;)
+(-1.8941399412343751, -2.2408169145169934, &#39;give&#39;)
+(2.3213184801466498, 3.9849978694906598, &#39;may&#39;)
+(5.639164724970783, -5.9589769215087305, &#39;original&#39;)
+(-3.6463307283905837, -5.3026923881206658, &#39;own&#39;)
+(2.2806086088140116, 5.5121709707985396, &#39;action&#39;)
+(-2.0131476843997991, -3.5691395255937364, &quot;i&#39;ve&quot;)
+(3.394657674885333, 2.8410694140865829, &#39;right&#39;)
+(-5.5685124940563755, 0.59997828560251043, &#39;without&#39;)
+(1.4230778239253532, 7.6340369096398861, &#39;always&#39;)
+(2.1537009784396708, 6.2732022430436629, &#39;times&#39;)
+(-4.6987731599183125, -5.7836993479011483, &#39;comedy&#39;)
+(2.5057217244204741, -5.6012523147246753, &#39;point&#39;)
+(-2.3642808208145083, -5.3618949649748657, &#39;gets&#39;)
+(-2.2717834377342552, 6.3972336502737877, &#39;must&#39;)
+(-4.4329220180535351, -6.0701017888406694, &#39;come&#39;)
+(0.28795657606449809, 1.8507178043504213, &#39;role&#39;)
+(-1.1290606514922099, -7.3427851263633288, &quot;isn&#39;t&quot;)
+(2.1277622737805468, 3.2813165718747599, &#39;saw&#39;)
+(-4.702763472321414, 1.4475031380199257, &#39;almost&#39;)
+(3.4316338860751365, -5.8626851784439271, &#39;interesting&#39;)
+(8.2856976951788397, -4.4033893794445262, &#39;least&#39;)
+(2.5297770856202044, 6.4043968839291914, &#39;family&#39;)
+(-4.3553029630465927, -0.84039445903613041, &#39;done&#39;)
+(1.1333749907291035, 9.8678307797847911, &quot;there&#39;s&quot;)
+(-3.4001933521082179, -2.2538737154434565, &#39;whole&#39;)
+(7.9320800009727588, 3.2344072027758113, &#39;bit&#39;)
+(0.90870127754317964, 8.4451381831528067, &#39;music&#39;)
+(10.585960472294396, -4.4840818417515207, &#39;script&#39;)
+(1.2641586165238741, 0.23932654927084043, &#39;far&#39;)
+(5.0151467879044924, -4.1217096922167702, &#39;making&#39;)
+(-6.4708221896849789, 3.4611588886766769, &#39;guy&#39;)
+(2.6156840935642132, -5.2247738122973617, &#39;anything&#39;)
+(9.9949610929164798, -5.1555968327342638, &#39;minutes&#39;)
+(-4.1109658539633953, -3.677854973675291, &#39;feel&#39;)
+(0.4922479377772111, 5.2239754118795787, &#39;last&#39;)
+(-5.9423302075918931, -0.66063985507641065, &#39;since&#39;)
+(3.5128229749654403, -5.2394013056675668, &#39;might&#39;)
+(1.037846957778908, -0.49810999474719914, &#39;performance&#39;)
+(1.750001099747452, -5.1114983538700907, &quot;he&#39;s&quot;)
+(5.2356262704039871, -5.0675006035045023, &#39;2&#39;)
+(0.88602569733389291, -0.33540699033719951, &#39;probably&#39;)
+(2.0277933257551957, -5.1970044390235479, &#39;kind&#39;)
+(5.6446363044972445, -3.6299381301745459, &#39;am&#39;)
+(-3.8660450948509619, -6.4266239469634927, &#39;away&#39;)
+(-6.2494089412853171, -2.2465761909600777, &#39;yet&#39;)
+(-6.722481451423965, 1.370741254754009, &#39;rather&#39;)
+(-3.798850934995829, -3.6825212352934269, &#39;tv&#39;)
+(12.368484158687448, -4.6458487801049113, &#39;worst&#39;)
+(-2.7249769352184527, -0.52673922168423604, &#39;girl&#39;)
+(-3.9562759581817795, -6.9314353360247436, &#39;day&#39;)
+(-0.36221171884599057, 3.5391120752446636, &#39;sure&#39;)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[38]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Lets see what the embedding learned, </span>
+<span class="c1"># provoking is close to great in cosine space, that&#39;s cool and definettly movie specific</span>
+
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="kn">import</span> <span class="n">euclidean</span>
+
+<span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">euclidean</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">embmatrix</span><span class="p">[</span><span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">word_index</span><span class="p">[</span><span class="s1">&#39;great&#39;</span><span class="p">],:]),</span> 
+                                            <span class="mi">1</span><span class="p">,</span> <span class="n">embmatrix</span><span class="p">))[:</span><span class="mi">20</span><span class="p">]:</span>
+    <span class="k">print</span><span class="p">((</span><span class="n">wordDic</span><span class="p">[</span><span class="n">value</span><span class="p">],</span> <span class="n">euclidean</span><span class="p">(</span><span class="n">embmatrix</span><span class="p">[</span><span class="n">value</span><span class="p">,:],</span> <span class="n">embmatrix</span><span class="p">[</span><span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">word_index</span><span class="p">[</span><span class="s1">&#39;great&#39;</span><span class="p">],:])))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>(&#39;great&#39;, 0.0)
+(&#39;wonderful&#39;, 0.5050570964813232)
+(&#39;courage&#39;, 0.5211796164512634)
+(&#39;sweet&#39;, 0.525455892086029)
+(&#39;touched&#39;, 0.5273863077163696)
+(&#39;favourite&#39;, 0.5292160511016846)
+(&#39;keeper&#39;, 0.53465735912323)
+(&#39;tremendous&#39;, 0.5355396270751953)
+(&#39;cried&#39;, 0.538032054901123)
+(&#39;stone&#39;, 0.5390382409095764)
+(&#39;underrated&#39;, 0.5393837690353394)
+(&#39;prince&#39;, 0.5457939505577087)
+(&#39;steals&#39;, 0.5471921563148499)
+(&#39;unique&#39;, 0.5480167269706726)
+(&#39;wonderfully&#39;, 0.5497465133666992)
+(&#39;absorbing&#39;, 0.5497508645057678)
+(&#39;impact&#39;, 0.5505578517913818)
+(&#39;terrific&#39;, 0.5513530373573303)
+(&#39;unforgettable&#39;, 0.5517123937606812)
+(&#39;chavez&#39;, 0.5537125468254089)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[39]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="kn">import</span> <span class="n">cosine</span>
+
+<span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">cosine</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">embmatrix</span><span class="p">[</span><span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">word_index</span><span class="p">[</span><span class="s1">&#39;great&#39;</span><span class="p">],:]),</span> 
+                                            <span class="mi">1</span><span class="p">,</span> <span class="n">embmatrix</span><span class="p">))[:</span><span class="mi">20</span><span class="p">]:</span>
+    <span class="k">print</span><span class="p">((</span><span class="n">wordDic</span><span class="p">[</span><span class="n">value</span><span class="p">],</span> <span class="n">cosine</span><span class="p">(</span><span class="n">embmatrix</span><span class="p">[</span><span class="n">value</span><span class="p">,:],</span> <span class="n">embmatrix</span><span class="p">[</span><span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">word_index</span><span class="p">[</span><span class="s1">&#39;great&#39;</span><span class="p">],:])))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>(&#39;great&#39;, -4.968141431582751e-08)
+(&#39;wonderful&#39;, 0.22880693842383337)
+(&#39;gem&#39;, 0.24017793216085392)
+(&#39;excellent&#39;, 0.27010345380361955)
+(&#39;favourite&#39;, 0.27908294232026432)
+(&#39;terrific&#39;, 0.28615594423807988)
+(&#39;courage&#39;, 0.2861641785088691)
+(&#39;favorite&#39;, 0.29017409763723823)
+(&#39;wonderfully&#39;, 0.29305467770506521)
+(&#39;unforgettable&#39;, 0.29309888019949715)
+(&#39;touched&#39;, 0.29871607709852777)
+(&#39;perfect&#39;, 0.299027911919717)
+(&#39;underrated&#39;, 0.2993400818958184)
+(&#39;cried&#39;, 0.29983298338034214)
+(&#39;delightful&#39;, 0.30433546962950253)
+(&#39;amazing&#39;, 0.30735002923320831)
+(&#39;sweet&#39;, 0.30837306478078952)
+(&#39;today&#39;, 0.31421591438039453)
+(&#39;crafted&#39;, 0.31456208191961121)
+(&#39;prince&#39;, 0.31530052864802272)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[40]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span><span class="n">reviewTokenizer</span><span class="o">.</span><span class="n">word_index</span><span class="p">[</span><span class="s1">&#39;great&#39;</span><span class="p">]</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[40]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>84</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&#160;[&#160;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython2"><pre><span></span> 
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+    </div>
+  </div>
+
+
+<script type="text/javascript" src="/d2l/common/math/MathML.js?v=10.7.3.7486-324 "></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() { D2LMathML.DesktopInit('https://s.brightspace.com/lib/mathjax/2.6.1/MathJax.js?config=MML_HTMLorMML','https://s.brightspace.com/lib/mathjax/2.6.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML'); });</script></body></html>
